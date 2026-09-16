@@ -1,0 +1,17 @@
+# imza — ASLA git'e girmez
+keystore.properties
+*.keystore
+*.jks
+
+# uretilen
+build/
+app/build/
+.gradle/
+local.properties
+app/src/main/assets/
+*.aab
+*.apk
+*.idsig
+
+# yedekler
+*.yedek

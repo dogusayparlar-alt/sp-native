@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- NO INTERNET PERMISSION, DELIBERATELY. The whole game ships inside the
+         APK and is served from it; the app cannot reach the network even if
+         some future card tried to. This is the difference the owner asked for
+         between this build and the Chrome-backed one. -->
+
+    <!-- THE SEAL IS FELT IN THE HAND. main.js has vibrated on every sealed
+         decree since 2026-08-26, wrapped in a try/catch that swallowed the
+         permission error — so the beat worked in a browser and was silently
+         dead in the packaged app, which is the one place a phone is actually
+         in a hand. VIBRATE is a normal permission: no prompt, no dialog. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:allowBackup="true"
+        android:fullBackupContent="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:hardwareAccelerated="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTask"
+            android:hardwareAccelerated="true"
+            android:theme="@style/AppTheme"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|smallestScreenSize|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- the crash screen: its own process, so it survives the death of the
+             one that just threw -->
+        <activity
+            android:name=".CrashActivity"
+            android:exported="false"
+            android:process=":coker"
+            android:theme="@style/AppTheme" />
+    </application>
+</manifest>

@@ -1,0 +1,62 @@
+plugins { id 'com.android.application' }
+
+// Imza bilgileri keystore.properties'ten okunur; o dosya git'e girmez.
+def imza = new Properties()
+def imzaDosya = rootProject.file("keystore.properties")
+if (imzaDosya.exists()) { imzaDosya.withInputStream { imza.load(it) } }
+
+android {
+    namespace 'com.sixthpath.game'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.sixthpath.game"
+        minSdk 23
+        targetSdk 36
+        versionCode 1246
+        versionName "1.0.1246"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(imza['storeFile'] ?: "../android.keystore")
+            storePassword imza['storePassword']
+            keyAlias imza['keyAlias']
+            keyPassword imza['keyPassword']
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // the game is already minified by hand; nothing here should be re-compressed
+    // into a state the WebView cannot stream
+    aaptOptions { noCompress 'webp' }
+}
+
+configurations.all {
+    resolutionStrategy {
+        // Kotlin 1.8 folded kotlin-stdlib-jdk7/jdk8 into kotlin-stdlib itself, so a
+        // transitive dep still asking for the old 1.6.21 split artifacts hands the
+        // dexer two copies of every jdk7/jdk8 class. Pinning all three to the same
+        // version makes the split artifacts empty forwarders again.
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
+    }
+}
+
+dependencies {
+    // WebViewAssetLoader, and nothing else. MainActivity extends the framework's
+    // own Activity, so appcompat would only add weight.
+    implementation 'androidx.webkit:webkit:1.12.1'
+}
