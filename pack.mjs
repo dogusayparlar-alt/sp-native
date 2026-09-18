@@ -12,7 +12,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const SRC = 'C:/Users/adogu/quantum-last';
+// quantum-last her iki makinede de bu klasörün kardeşidir (Sakarya: C:/Users/adogu, ADOGUS: Desktop/Claude/6th)
+const SRC = process.env.SP_SRC || path.resolve(import.meta.dirname, '../quantum-last');
 const DST = path.join(import.meta.dirname, 'app/src/main/assets');
 
 // What the app actually loads. Editor scratch pages (panel-preview.html,
