@@ -136,6 +136,18 @@ public class MainActivity extends Activity {
         web.setBackgroundColor(Color.parseColor("#0b0a07"));
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
+        // THE WEBVIEW DRAWS INTO ITS OWN HARDWARE LAYER, AND ITS RENDERER IS NOT
+        // TRIMMED (owner, 2026-09-19, three screen recordings: the card went black
+        // in tiles while being dragged — perfect in Chrome, broken here). A WebView
+        // drawn inline into the view hierarchy gets a far smaller tile budget than
+        // Chrome and drops tiles under pressure; its own layer composites whole
+        // frames, and an IMPORTANT renderer is not asked to give memory back while
+        // the game is in front.
+        web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            try { web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false); } catch (Throwable ignore) { }
+        }
+
         // A WEBVIEW WITH NO CHROME CLIENT ANSWERS confirm() WITH false AND
         // DRAWS NOTHING. Every button behind a confirmation was therefore dead
         // in the packaged app while working in a browser (owner, 2026-08-25:
