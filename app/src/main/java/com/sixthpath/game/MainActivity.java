@@ -98,8 +98,13 @@ public class MainActivity extends Activity {
 
         // the game paints its own black; the window must not flash white under it
         getWindow().setBackgroundDrawableResource(android.R.color.black);
-        getWindow().setStatusBarColor(Color.parseColor("#0b0a07"));
-        getWindow().setNavigationBarColor(Color.parseColor("#0b0a07"));
+        // Android 15+ (API 35) is edge-to-edge by force and these two setters are
+        // deprecated no-ops there (Play Console, 2026-09-19); the bars are hidden
+        // anyway and the window ground is already the game's black.
+        if (Build.VERSION.SDK_INT < 35) {
+            getWindow().setStatusBarColor(Color.parseColor("#0b0a07"));
+            getWindow().setNavigationBarColor(Color.parseColor("#0b0a07"));
+        }
 
         // THE SCREEN STAYS AWAKE WHILE THE GAME IS IN FRONT, AND ONLY THEN.
         // The flag was added once and never cleared, so it held the display on

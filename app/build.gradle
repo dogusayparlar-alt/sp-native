@@ -28,7 +28,10 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            // R8 (Play Console, 2026-09-19): the Java shell is tiny, but androidx.webkit is not
+            minifyEnabled true
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
         }
     }
