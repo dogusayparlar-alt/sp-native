@@ -297,19 +297,34 @@ public class MainActivity extends Activity {
         }
     }
 
+    private volatile boolean duraklatildi = false;
+
     @Override
     protected void onPause() {
         super.onPause();
         // a game nobody is looking at neither renders nor holds the screen on
         try { getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } catch (Throwable ignore) { }
-        if (web != null) { web.onPause(); web.pauseTimers(); }
+        // THE PAGE IS TOLD FIRST, THEN FROZEN (owner, 2026-09-20: the game kept running and
+        // making sound behind the home screen). The page's clock and both audio contexts hang
+        // on visibilitychange, which this WebView does not reliably fire; and pauseTimers()
+        // called at once froze the page before it could silence itself. The hook stops the
+        // clock and suspends audio; the freeze follows a beat later, only if still paused.
+        if (web != null) {
+            duraklatildi = true;
+            try { web.evaluateJavascript("try{window.__spArka&&window.__spArka(true)}catch(e){}", null); } catch (Throwable ignore) { }
+            web.postDelayed(() -> { if (duraklatildi && web != null) { web.onPause(); web.pauseTimers(); } }, 350);
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         try { getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } catch (Throwable ignore) { }
-        if (web != null) { web.resumeTimers(); web.onResume(); }
+        if (web != null) {
+            duraklatildi = false;
+            web.resumeTimers(); web.onResume();
+            try { web.evaluateJavascript("try{window.__spArka&&window.__spArka(false)}catch(e){}", null); } catch (Throwable ignore) { }
+        }
     }
 
     @Override
