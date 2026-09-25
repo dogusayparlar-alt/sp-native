@@ -19,7 +19,7 @@ const DST = path.join(import.meta.dirname, 'app/src/main/assets');
 // What the app actually loads. Editor scratch pages (panel-preview.html,
 // scene-probe.html, the old /echoes RPG) are not shipped — they would double
 // the APK for pages no player can reach.
-const TAKE = ['index.html', 'css', 'js', 'img', 'snd', 'fonts', 'manifest.webmanifest'];
+const TAKE = ['index.html', 'css', 'js', 'img', 'snd', 'fonts', 'veri', 'manifest.webmanifest']; // veri/: mühür sonuç cümleleri (sonuc_cumle.json)
 
 function copy(src, dst) {
   const st = fs.statSync(src);

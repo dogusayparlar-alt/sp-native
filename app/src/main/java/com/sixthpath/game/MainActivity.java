@@ -114,6 +114,7 @@ public class MainActivity extends Activity {
         // the lifecycle: set in onResume, cleared in onPause, so a backgrounded
         // game costs nothing.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        altmisHz();
 
         final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
                 .addPathHandler("/", new WebViewAssetLoader.AssetsPathHandler(this))
@@ -141,14 +142,24 @@ public class MainActivity extends Activity {
         web.setBackgroundColor(Color.parseColor("#0b0a07"));
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
-        // THE WEBVIEW DRAWS INTO ITS OWN HARDWARE LAYER, AND ITS RENDERER IS NOT
-        // TRIMMED (owner, 2026-09-19, three screen recordings: the card went black
-        // in tiles while being dragged — perfect in Chrome, broken here). A WebView
-        // drawn inline into the view hierarchy gets a far smaller tile budget than
-        // Chrome and drops tiles under pressure; its own layer composites whole
-        // frames, and an IMPORTANT renderer is not asked to give memory back while
-        // the game is in front.
-        web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        // THE WEBVIEW DRAWS INLINE — NO VIEW LAYER (perf pass, 2026-09-23).
+        // setLayerType(LAYER_TYPE_HARDWARE) was tried on 2026-09-19 against the
+        // black-tile drag and is reverted. A hardware View layer is meant for a
+        // STATIC view being animated; a WebView changes every frame, so the layer
+        // is re-rendered every frame: one extra screen-sized offscreen buffer
+        // (~10 MB at 1080x2400) and one extra full-screen composite per frame. The
+        // WebView's GPU draw functor then renders into an offscreen target instead
+        // of the window surface — on Vulkan-backed HWUI (Android 12+) that is a
+        // slower interop path, and "WebView black / flickering inside a hardware
+        // layer" is a long-known failure mode. It also does not enlarge the tile
+        // budget: WebView sizes that from the view's pixel area, not its layer
+        // type. The real causes of the black tiles were in the page (layer
+        // explosion, perpetual frames) and are fixed there — see
+        // quantum-last/docs/devir/PERF_2026-09-23.md. LAYER_TYPE_NONE is the
+        // default; it is set explicitly so the choice is visible.
+        web.setLayerType(View.LAYER_TYPE_NONE, null);
+        // An IMPORTANT renderer is not asked to give memory back while the game
+        // is in front (harmless, kept).
         if (android.os.Build.VERSION.SDK_INT >= 26) {
             try { web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false); } catch (Throwable ignore) { }
         }
@@ -297,6 +308,61 @@ public class MainActivity extends Activity {
         }
     }
 
+    // ---- ISINMA (2026-09-24, quantum-last/docs/devir/ISINMA_2026-09-24.md) ----------------------
+    // 1) 60 Hz YETER. 90/120/144 Hz ekranlı telefonlarda WebView her animasyonu ve sürüklemeyi ekranın
+    //    tam hızında besteler: aynı görüntü için iki kat GPU/derleyici işi. Kart oyununda 60 Hz'in
+    //    üstü görünmez ama ısınır. Pencere aynı çözünürlükte 60 Hz'lik kipi ister (tercih; sistem
+    //    reddedebilir). 60 Hz'lik ekranda hiçbir şey değişmez.
+    private void altmisHz() {
+        try {
+            if (Build.VERSION.SDK_INT < 23) return;
+            android.view.Display d = Build.VERSION.SDK_INT >= 30 ? getDisplay() : getWindowManager().getDefaultDisplay();
+            if (d == null) return;
+            android.view.Display.Mode su = d.getMode();
+            if (su.getRefreshRate() < 61f) return;
+            android.view.Display.Mode en = null;
+            for (android.view.Display.Mode m : d.getSupportedModes()) {
+                if (m.getPhysicalWidth() == su.getPhysicalWidth() && m.getPhysicalHeight() == su.getPhysicalHeight()
+                        && Math.abs(m.getRefreshRate() - 60f) < 1.5f) { en = m; break; }
+            }
+            WindowManager.LayoutParams p = getWindow().getAttributes();
+            if (en != null) p.preferredDisplayModeId = en.getModeId();
+            p.preferredRefreshRate = 60f;
+            getWindow().setAttributes(p);
+        } catch (Throwable ignore) { }
+    }
+
+    // 2) EKRAN, OYUNCU GİTTİĞİNDE KAPANABİLSİN. FLAG_KEEP_SCREEN_ON uygulama öndeyken hiç
+    //    kalkmıyordu: masada açık bırakılan telefon ekranı ve GPU'yu saatlerce tam parlaklıkta
+    //    tutuyordu. Bayrak artık son dokunuştan EKRAN_MS sonra kalkar (sistemin kendi ekran zaman
+    //    aşımı işler); ilk dokunuşta geri gelir. Kart okuyan oyuncu 5 dakikaya yaklaşmaz.
+    private static final long EKRAN_MS = 5 * 60 * 1000L;
+    private long sonDokunus = System.currentTimeMillis();
+    private boolean ekranTutuluyor = true;
+    private final Runnable ekranBekci = new Runnable() {
+        @Override public void run() {
+            if (duraklatildi) return;
+            long kalan = EKRAN_MS - (System.currentTimeMillis() - sonDokunus);
+            if (kalan <= 0) {
+                try { getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } catch (Throwable ignore) { }
+                ekranTutuluyor = false;
+            } else if (kok != null) kok.postDelayed(this, kalan + 500);
+        }
+    };
+    private void ekranTut() {
+        sonDokunus = System.currentTimeMillis();
+        if (!ekranTutuluyor) {
+            ekranTutuluyor = true;
+            try { getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } catch (Throwable ignore) { }
+        }
+        if (kok != null) { kok.removeCallbacks(ekranBekci); kok.postDelayed(ekranBekci, EKRAN_MS + 500); }
+    }
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent e) {
+        if (e.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) ekranTut();
+        return super.dispatchTouchEvent(e);
+    }
+
     private volatile boolean duraklatildi = false;
 
     @Override
@@ -304,6 +370,7 @@ public class MainActivity extends Activity {
         super.onPause();
         // a game nobody is looking at neither renders nor holds the screen on
         try { getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } catch (Throwable ignore) { }
+        if (kok != null) kok.removeCallbacks(ekranBekci);
         // THE PAGE IS TOLD FIRST, THEN FROZEN (owner, 2026-09-20: the game kept running and
         // making sound behind the home screen). The page's clock and both audio contexts hang
         // on visibilitychange, which this WebView does not reliably fire; and pauseTimers()
@@ -319,7 +386,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        try { getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } catch (Throwable ignore) { }
+        ekranTutuluyor = false;                // ekranTut bayrağı koyar ve bekçiyi kurar
+        ekranTut();
         if (web != null) {
             duraklatildi = false;
             web.resumeTimers(); web.onResume();
