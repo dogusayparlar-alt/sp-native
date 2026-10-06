@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId "com.sixthpath.game"
-        minSdk 23
+        minSdk 24
         targetSdk 36
         versionCode 1330
         versionName "1.0.1330"
