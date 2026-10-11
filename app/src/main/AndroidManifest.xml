@@ -37,6 +37,19 @@
             </intent-filter>
         </activity>
 
+        <!-- PAYLAŞ (b1332): oyunun sonundaki plaka önbellekten (cache/paylas/) content:// ile
+             paylaşılır (MainActivity.Kopru.paylas). Dışa açık değil; okuma izni yalnız paylaşım
+             niyetiyle, o tek dosya için verilir. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.paylas"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/paylas_yollari" />
+        </provider>
+
         <!-- the crash screen: its own process, so it survives the death of the
              one that just threw -->
         <activity

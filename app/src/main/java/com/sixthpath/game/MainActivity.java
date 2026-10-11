@@ -74,6 +74,45 @@ public class MainActivity extends Activity {
         public void hazir() {
             runOnUiThread(() -> splashKaldir());
         }
+
+        /**
+         * PAYLAŞ (b1332). Sistem WebView'ı Web Share API'yi taşımaz (navigator.share yok) ve bir blob
+         * indirme bağlantısı hiçbir yere inmez; oyunun sonundaki plaka bu yüzden kabuğa verilir.
+         * Sayfa (share.js shareCard) PNG'yi base64 olarak yollar: önbelleğe (cache/paylas/, yalnız son
+         * plaka tutulur) yazılır, FileProvider ile content:// adresi alınır ve sistemin paylaşım sayfası
+         * açılır. İzin istemez (uygulamanın kendi önbelleği); ağ yok. Dönüş: sayfa açılabildi mi.
+         */
+        @JavascriptInterface
+        public boolean paylas(String b64, String metin, String ad) {
+            try {
+                if (b64 == null || b64.isEmpty()) return false;
+                byte[] veri = android.util.Base64.decode(b64, android.util.Base64.DEFAULT);
+                java.io.File dizin = new java.io.File(getCacheDir(), "paylas");
+                if (!dizin.exists() && !dizin.mkdirs()) return false;
+                java.io.File[] eski = dizin.listFiles();
+                if (eski != null) for (java.io.File x : eski) { try { x.delete(); } catch (Throwable ignore) { } }
+                String temiz = (ad == null || ad.isEmpty()) ? "sixthpath.png" : ad.replaceAll("[^A-Za-z0-9._-]", "-");
+                if (!temiz.endsWith(".png")) temiz += ".png";
+                java.io.File dosya = new java.io.File(dizin, temiz);
+                try (java.io.FileOutputStream o = new java.io.FileOutputStream(dosya)) { o.write(veri); }
+                final Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                        MainActivity.this, getPackageName() + ".paylas", dosya);
+                android.content.Intent gonder = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                gonder.setType("image/png");
+                gonder.putExtra(android.content.Intent.EXTRA_STREAM, uri);
+                if (metin != null && !metin.isEmpty()) gonder.putExtra(android.content.Intent.EXTRA_TEXT, metin);
+                gonder.setClipData(android.content.ClipData.newRawUri("", uri));
+                gonder.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                final android.content.Intent secici = android.content.Intent.createChooser(gonder, null);
+                secici.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                runOnUiThread(() -> {
+                    try { startActivity(secici); } catch (Throwable ignore) { }
+                });
+                return true;
+            } catch (Throwable t) {
+                return false;
+            }
+        }
     }
 
     /** Fade the mark out and drop it. Idempotent: the page may say ready twice. */
