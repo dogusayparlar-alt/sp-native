@@ -91,3 +91,15 @@ if (/^\d+$/.test(build)) {
 }
 
 console.log(`packed build ${build}: ${files} files, ${(bytes / 1048576).toFixed(1)} MB`);
+
+// ---- the intro video ---------------------------------------------------------
+// GİRİŞ VİDEOSU (quantum-last js/sim/giris.js): snd/giris/ rides in with snd/ (TAKE copies whole folders, no
+// extension filter). mp4 and m4a are on aapt's default no-compress list, so they are stored, not deflated. The
+// game falls back silently when the files are missing — which is exactly why a pack without them must say so.
+{
+  const gd = path.join(DST, 'snd/giris');
+  const want = ['giris.mp4', 'ses_tr.m4a', 'ses_en.m4a'];
+  const miss = want.filter((f) => !fs.existsSync(path.join(gd, f)));
+  if (miss.length) console.warn('intro video: MISSING ' + miss.join(', ') + ' — the app will skip the intro');
+  else console.log('intro video: ' + (want.reduce((s, f) => s + fs.statSync(path.join(gd, f)).size, 0) / 1048576).toFixed(2) + ' MB (snd/giris)');
+}
