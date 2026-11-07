@@ -40,6 +40,26 @@ fs.mkdirSync(DST, { recursive: true });
 for (const e of fs.readdirSync(DST)) fs.rmSync(path.join(DST, e), { recursive: true, force: true });
 for (const t of TAKE) copy(path.join(SRC, t), path.join(DST, t));
 
+// ---- KARTIN HİKAYESİ kareleri: 640 px AVIF q45 (sahip 2026-11-07) ------------
+// Sitede 800 px webp (~91 KB) kalır; pakette her kare ~30 KB. 2253 karenin hepsi ~65 MB (webp'le ~200 MB, Play sınırı 200 MB).
+// Oyun uygulamada .avif ister (tools/hikaye_foto.mjs). Kaynak yüksek kaliteli ham jpg varsa o, yoksa webp. Dönüşüm önbelleği
+// sp-native/build/hikaye_avif (aynı kare yeniden çevrilmez). sharp yolu SP_SHARP ya da varsayılan scratchpad kurulumu.
+{
+  const { createRequire } = await import('node:module');
+  const SHARP = process.env.SP_SHARP || 'C:/Users/burha/AppData/Local/Temp/claude/C--Users-burha-Desktop-Claude-6th/e888d17d-be60-496f-990a-ad3099bff6e3/scratchpad/nodemod/node_modules/sharp';
+  const sharp = createRequire(import.meta.url)(SHARP);
+  const HK = path.join(DST, 'img', 'hikaye'), HAM = path.resolve(SRC, '..', 'dreamlab_ham', 'hikaye'), ONB = path.resolve('build', 'hikaye_avif');
+  fs.mkdirSync(ONB, { recursive: true });
+  let n = 0, kb = 0;
+  for (const f of fs.existsSync(HK) ? fs.readdirSync(HK).filter((x) => x.endsWith('.webp')) : []) {
+    const ad = f.slice(0, -5), web = path.join(HK, f), jpg = path.join(HAM, ad + '.jpg'), kay = fs.existsSync(jpg) ? jpg : web;
+    const on = path.join(ONB, ad + '.avif');
+    if (!fs.existsSync(on) || fs.statSync(on).mtimeMs < fs.statSync(kay).mtimeMs) await sharp(kay).resize(640, 640).avif({ quality: 45 }).toFile(on);
+    fs.copyFileSync(on, path.join(HK, ad + '.avif')); fs.rmSync(web); n++; kb += fs.statSync(on).size / 1024;
+  }
+  console.log('hikaye kareleri: ' + n + ' AVIF, ' + (kb / 1024).toFixed(1) + ' MB');
+}
+
 // ---- the two packaged-build edits ------------------------------------------
 const idx = path.join(DST, 'index.html');
 let h = fs.readFileSync(idx, 'utf8');

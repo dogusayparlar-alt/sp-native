@@ -214,7 +214,10 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest req) {
-                return loader.shouldInterceptRequest(req.getUrl());
+                WebResourceResponse r = loader.shouldInterceptRequest(req.getUrl());
+                // AVIF hikaye kareleri (pack.mjs): varlık yükleyicisi uzantıyı tanımazsa türü düzelt
+                if (r != null && req.getUrl().getPath() != null && req.getUrl().getPath().endsWith(".avif")) r.setMimeType("image/avif");
+                return r;
             }
 
             /** THE RENDERER'S DEATH IS NOT THE APP'S. On targetSdk 26+ a dead
