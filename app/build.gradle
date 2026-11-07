@@ -13,8 +13,8 @@ android {
         applicationId "com.sixthpath.game"
         minSdk 24
         targetSdk 36
-        versionCode 1357
-        versionName "1.0.1357"
+        versionCode 1358
+        versionName "1.0.1358"
     }
 
     signingConfigs {
