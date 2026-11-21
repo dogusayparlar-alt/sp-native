@@ -13,6 +13,12 @@
          in a hand. VIBRATE is a normal permission: no prompt, no dialog. -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- DİKEY EKRAN İSTEĞE BAĞLI (Play, 1.0.1411: "Required hardware feature declarations are restricting your app's
+         availability — android.hardware.screen.portrait"). Etkinlik screenOrientation="portrait" ile kilitli; bu,
+         manifeste dikey ekranı ZORUNLU donanım olarak örtük ekliyor ve yalnız yatay ekranı olan cihazlar (bazı tablet,
+         masaüstü, Android XR) uygulamayı kuramıyordu. Kilit kalır; özellik yalnız "zorunlu değil" ilan edilir. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:fullBackupContent="true"
